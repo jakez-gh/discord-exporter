@@ -77,6 +77,12 @@ persisted here:
   but covers the expanded requirements described in
   `docs/inventory_guidelines.md` (also committed).
 
+* **Header verification** – every supported file (`.js`, `.md`) is scanned by
+  `tests/tools/header_check.py` to ensure its first few lines contain a
+  natural‑language description and a semantic version string (e.g. `1.2.3`).
+  This encourages explicit versioning and descriptive headers across the
+  codebase.
+
 * **Quality‑gates documentation** – ensures this very document exists and
   actually *describes what should and should not be contained within it*.
   This gate was created specifically for this repository in response to a

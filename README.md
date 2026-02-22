@@ -34,6 +34,16 @@ simple gate) on every commit/PR.  It enforces:
 * one-to-one correspondence between filesystem and inventory
 * uniqueness of each item description
 
+### Semantic versioning & headers
+
+The exported userscript version is drawn from `package.json` every time you
+run `build.bat`.  Bump the `version` field there to advance the release.
+
+Every supported source file should also include a header section (first few
+lines) containing both a short description and a semantic version string
+(`x.y.z`).  The CI job will run `tests/tools/header_check.py` to verify this
+across `.js` and `.md` files.
+
 ### Initialising a new repository
 
 After cloning the repository run the Windows batch helper to prepare your

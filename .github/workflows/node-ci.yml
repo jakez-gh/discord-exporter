@@ -37,6 +37,10 @@ jobs:
         run: |
           python tests/tools/inventory_rules.py || exit 1
 
+      - name: Header description & version check
+        run: |
+          python tests/tools/header_check.py || exit 1
+
       - name: Check quality-gates documentation exists
         run: |
           python tests/tools/check_gates_doc.py || exit 1
