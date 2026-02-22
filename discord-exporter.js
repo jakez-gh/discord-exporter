@@ -32,7 +32,10 @@
     UpgradeAttachments(extract);
 
     setTimeout(() => {
+        // pass dom helper so UI can watch for message load before declaring
+        // itself "Ready"; keeps panel status in sync with actual content.
         ui.init({
+            dom,
             onStart: () => scroll.start(),
             onStop: () => scroll.stop(false),
             onSaveTxt: () => save.download('txt', extract),
