@@ -1,6 +1,6 @@
 {
   "name": "discord-exporter",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "description": "Tampermonkey script for exporting Discord chats",
   "main": "build.js",
   "scripts": {
