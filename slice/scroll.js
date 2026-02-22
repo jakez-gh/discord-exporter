@@ -11,7 +11,7 @@
             lastCount = Dom.items().length;
             lastChange = Date.now();
 
-            UI.setStatus('Scrolling…');
+            UI.showModal('Scrolling…');
 
             interval = setInterval(() => {
                 const before = scroller.scrollTop;
@@ -21,6 +21,7 @@
                 if (count !== lastCount) {
                     lastCount = count;
                     lastChange = Date.now();
+                    UI.showModal(`Scrolling… ${count} messages seen`);
                 }
 
                 if (scroller.scrollTop === before &&
@@ -33,6 +34,7 @@
         stop(auto) {
             clearInterval(interval);
             interval = null;
+            UI.hideModal();
             UI.setStatus(auto ? 'Reached top. Extracting…' : 'Stopped.');
             UI.enableSave();
         }

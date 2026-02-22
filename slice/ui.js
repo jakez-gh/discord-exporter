@@ -12,6 +12,9 @@
             const panel = document.createElement('div');
             panel.id = Config.ui.panelId;
             panel.innerHTML = `
+                <div style="font-size:12px; margin-bottom:4px;">
+                    Discord chat exporter (Tampermonkey script by Ben)
+                </div>
                 <button id="dmexp-start">Start</button>
                 <button id="dmexp-stop">Stop</button>
                 <button id="dmexp-save-txt" disabled>Save TXT</button>
@@ -78,6 +81,28 @@
             btn.textContent = 'Export Discord';
             btn.onclick = this.cb.onStart;
             document.body.appendChild(btn);
+        },
+        // modal overlay for status updates
+        showModal(msg) {
+            let m = document.getElementById('dmexp-modal');
+            if (!m) {
+                m = document.createElement('div');
+                m.id = 'dmexp-modal';
+                m.style = 'position:fixed;top:0;left:0;width:100%;height:100%;' +
+                          'background:rgba(0,0,0,0.5);display:flex;' +
+                          'align-items:center;justify-content:center;z-index:10002;';
+                const inner = document.createElement('div');
+                inner.id = 'dmexp-modal-text';
+                inner.style = 'background:white;padding:20px;border-radius:8px;max-width:80%;';
+                m.appendChild(inner);
+                document.body.appendChild(m);
+            }
+            document.getElementById('dmexp-modal-text').textContent = msg;
+            m.style.display = 'flex';
+        },
+        hideModal() {
+            const m = document.getElementById('dmexp-modal');
+            if (m) m.style.display = 'none';
         },
         enableSave() {
             document.getElementById('dmexp-save-txt').disabled = false;
