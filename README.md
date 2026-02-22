@@ -15,32 +15,54 @@ This repository contains a Tampermonkey user script that can download Discord ch
 
 ## Development
 
-The project includes a simple build script that concatenates modular source files into a single
-Tampermonkey userscript located in `dist/discord-exporter.user.js`. The `dist` folder is ignored by
-Git to ensure artifacts are not persisted.
+The project includes a simple build script (`build.js`) that concatenates modular source
+files into a single Tampermonkey userscript located in `dist/discord-exporter.user.js`.
+The `dist` folder is ignored by Git so build outputs are never persisted.
 
-You can run the build manually with:
+### Inventory strategy
 
-```bash
-npm install            # install dev dependencies (eslint, husky, semgrep, etc.)
-npm run build          # generate the userscript in dist/
+To aid both humans and LLMs in understanding project structure we maintain a
+root‑level inventory file at `docs/INVENTORY.md`.  A quality‑gate script
+(`tests/tools/inventory_quality_gate.py`) runs on every commit and CI job, flagging
+any files or directories that are not documented.
+
+### Initialising a new repository
+
+After cloning the repository run the Windows batch helper to prepare your
+environment:
+
+```bat
+install.bat   REM installs dependencies and sets up git hooks
+```
+
+Other helpful commands (all shipped as `.bat` scripts to document intent and
+provide comments) include:
+
+```
+build.bat            REM generate the userscript
+lint.bat             REM run ESLint over the source
+inventory_check.bat  REM verify docs/INVENTORY.md matches filesystem
+check_gates_doc.bat  REM verify automated_quality_gates.md content
 ```
 
 ### Git Hooks and Quality Gates
 
-Husky is used to install a `pre-commit` hook that automatically:
+Husky implements a pre‑commit hook that does the following:
 
-1. Executes the build script and prevents committing any files under `dist/`.
-2. Runs ESLint (optionally via lint-staged) on changed files.
-3. Executes any additional security scans (ESLint, `npm audit`, etc.).
+1. Runs the build script and blocks any staged files in `dist/`.
+2. Executes ESLint on staged JavaScript (via `lint-staged`).
+3. Runs the inventory and gates‑doc validation scripts.
 
-Install the hooks with:
+We track work using the MCP **todoagent**; avoid paper TODOs or ad‑hoc lists and
+create/update tasks through that agent instead.  Commit early and often – the
+hook will prevent unsafe or incomplete changes.
 
-```bash
-npm run prepare        # sets up husky hooks
-```
+### CI/CD
 
-Commit early and often; the hook will run on each commit and block unsafe or unbuilt changes.
+A GitHub Actions pipeline (`.github/workflows/node-ci.yml`) executes on every push
+or pull request against `main`. It includes jobs for linting, building, security
+scans, a blocking quality gate, and PR comment summarisation.  Additional
+workflows handle Dependabot updates and CodeQL analysis (see `.github/workflows`).
 
 ## CI/CD
 

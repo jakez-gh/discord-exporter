@@ -27,15 +27,24 @@ The GitHub Actions pipeline (`.github/workflows/node-ci.yml`) covers:
 
 ## Branch protection & commit policy
 
-While GitHub plan restrictions may prevent enforced branch protection, the
-combination of:
+For maximum safety we recommend enabling GitHub branch protection rules on the
+`main` (and any future release) branch. Typical settings include:
 
-- pre-commit hooks,
-- frequent commits ("commit early, commit often"),
-- workflow gating on `main`
+- Require status checks to pass (the `lint`, `build` and `quality-gate` jobs)
+- Require pull request reviews before merging
+- Prevent force pushes and deletion
 
-keeps quality high.  Developers are encouraged to open pull requests early and
-review changes as they go.
+If your GitHub plan does not allow automatic enforcement, you can still adhere
+manually: the workflow gating on `main` ensures that broken commits cannot be
+merged without failing the quality gate and generating a warning comment.
+
+Combine these protections with:
+
+- pre-commit hooks configured in the repo
+- frequent commits ("commit early, commit often")
+- use of the MCP todoagent to track work and dependencies
+
+and you achieve a robust, self‑documenting development process.
 
 ## Export handling
 
