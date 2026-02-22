@@ -41,6 +41,10 @@ jobs:
         run: |
           python tests/tools/header_check.py || exit 1
 
+      - name: Semantic version regression check
+        run: |
+          python tests/tools/version_gate.py || exit 1
+
       - name: Check quality-gates documentation exists
         run: |
           python tests/tools/check_gates_doc.py || exit 1

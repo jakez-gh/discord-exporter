@@ -44,6 +44,11 @@ lines) containing both a short description and a semantic version string
 (`x.y.z`).  The CI job will run `tests/tools/header_check.py` to verify this
 across `.js` and `.md` files.
 
+A second gate (`tests/tools/version_gate.py`) ensures that the version never
+steps backwards compared with the previous build (as recorded in the existing
+`dist` file or via git tags).  If the version is equal to the previous one the
+patch number is automatically incremented and the export rebuilt.
+
 ### Initialising a new repository
 
 After cloning the repository run the Windows batch helper to prepare your
