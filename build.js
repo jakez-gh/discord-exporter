@@ -37,11 +37,13 @@ ${content}
 }
 
 // Tampermonkey metadata block
+// version is pulled from package.json so each build reflects semantic version
+const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
 const METADATA = `
 // ==UserScript==
-// @name         Discord DM Exporter v3 Modular Build
+// @name         Discord DM Exporter v${pkg.version} Modular Build
 // @namespace    http://tampermonkey.net/
-// @version      3.2
+// @version      ${pkg.version}
 // @description  Built from modular source files
 // @match        https://discord.com/channels/@me/*
 // @run-at       document-idle
@@ -84,4 +86,4 @@ output += `
 
 fs.writeFileSync(OUTPUT, output, 'utf8');
 
-console.log('Build complete →', OUTPUT);
+console.log('Build complete (version ' + pkg.version + ') →', OUTPUT);
