@@ -1,6 +1,13 @@
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
+# semantic version guard (updates package.json and rebuilds if needed)
+if command -v python >/dev/null 2>&1; then
+  python tests/tools/version_gate.py || exit 1
+else
+  echo "WARNING: python not found, skipping version gate"
+fi
+
 # build the userscript and ensure dist files are not committed
 npm run build
 
