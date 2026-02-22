@@ -4,7 +4,7 @@
             this.cb = callbacks;
             this.injectStyles();
             this.createPanel();
-            this.addHeaderButton();
+            this.makeDraggable();
             this.setStatus('Ready.');
         },
 
@@ -75,13 +75,6 @@
             style.textContent = css;
             document.head.appendChild(style);
         },
-        addHeaderButton() {
-            const btn = document.createElement('div');
-            btn.className = 'dmexp-header-button';
-            btn.textContent = 'Export Discord';
-            btn.onclick = this.cb.onStart;
-            document.body.appendChild(btn);
-        },
         // modal overlay for status updates
         showModal(msg) {
             let m = document.getElementById('dmexp-modal');
@@ -107,6 +100,25 @@
         enableSave() {
             document.getElementById('dmexp-save-txt').disabled = false;
             document.getElementById('dmexp-save-json').disabled = false;
+        },
+        makeDraggable() {
+            const panel = document.getElementById(Config.ui.panelId);
+            let isDown = false;
+            let offset = [0,0];
+            panel.addEventListener('mousedown', function(e) {
+                isDown = true;
+                offset = [panel.offsetLeft - e.clientX, panel.offsetTop - e.clientY];
+            }, true);
+            document.addEventListener('mouseup', function() {
+                isDown = false;
+            }, true);
+            document.addEventListener('mousemove', function(event) {
+                event.preventDefault();
+                if (isDown) {
+                    panel.style.left = (event.clientX + offset[0]) + 'px';
+                    panel.style.top  = (event.clientY + offset[1]) + 'px';
+                }
+            }, true);
         }
     };
 }

@@ -2,11 +2,16 @@
     let interval = null;
     let lastChange = 0;
     let lastCount = 0;
+    console.log('Scroll module initialized, file slice/scroll.js');
 
     return {
         start() {
             const scroller = Dom.scroller();
-            if (!scroller) return UI.setStatus('Scroller not found.');
+            console.log('scroll.start invoked, scroller=', scroller);
+            if (!scroller) {
+                UI.showModal('Scroller not found; cannot scroll.');
+                return UI.setStatus('Scroller not found.');
+            }
 
             lastCount = Dom.items().length;
             lastChange = Date.now();
@@ -16,6 +21,7 @@
             interval = setInterval(() => {
                 const before = scroller.scrollTop;
                 scroller.scrollTop = 0;
+                console.log('scroller.scrollTop set to 0, before=', before, 'after=', scroller.scrollTop);
 
                 const count = Dom.items().length;
                 if (count !== lastCount) {
