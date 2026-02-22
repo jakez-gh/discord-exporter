@@ -33,9 +33,9 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Run inventory quality gate
+      - name: Run enhanced inventory rules gate
         run: |
-          python tests/tools/inventory_quality_gate.py || exit 1
+          python tests/tools/inventory_rules.py || exit 1
 
       - name: Check quality-gates documentation exists
         run: |

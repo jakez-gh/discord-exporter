@@ -69,7 +69,9 @@ persisted here:
   (`tests/tools/inventory_rules.py`) inspects every visible folder, confirming
   that `inventory.md` exists, describes the folder, lists each file/folder with
   a unique, sufficiently long description, and contains no extraneous entries.
-  This behaviour was inspired by the comprehensive gate in the
+  A companion requirements document (`docs/inventory_requirements.md`) containing
+  the project’s inventory philosophy must also exist; the gate checks for it on
+  every run.  This behaviour was inspired by the comprehensive gate in the
   `autoplay` repository (see
   https://github.com/jakez-gh/autoplay/blob/main/tests/tools/inventory_quality_gate.py)
   but covers the expanded requirements described in

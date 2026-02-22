@@ -117,6 +117,12 @@ def main():
         print(f"Root does not exist: {root}")
         return 2
 
+    # requirement document must exist
+    req = root / "docs" / "inventory_requirements.md"
+    if not req.exists():
+        print(f"❌ requirements document missing: {req}")
+        return 1
+
     errors = []
     for dirpath, dirnames, filenames in os.walk(root):
         # skip ignored directories
