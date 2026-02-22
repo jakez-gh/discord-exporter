@@ -29,6 +29,34 @@
 
             UI.showModal('Scrolling…');
 
+            // build status helper including oldest message timestamp
+            const updateStatus = () => {
+                const count = Dom.items().length;
+                let ts = 'unknown';
+                const first = Dom.items()[0];
+                if (first) {
+                    const t = first.querySelector('time');
+                    if (t && t.dateTime) ts = new Date(t.dateTime).toLocaleString();
+                }
+                UI.setStatus(`Scrolling… ${count} messages seen (oldest ${ts})`);
+            };
+
+            // use an observer to trigger immediate scrolling when new items arrive
+            const list = Dom.list();
+            if (list) {
+                this._observer = new MutationObserver(muts => {
+                    if (interval) {
+                        // perform a scroll immediately when DOM changes
+                        const before = scroller.scrollTop;
+                        if (flip) scroller.scrollTop = scroller.scrollHeight;
+                        else scroller.scrollTop = 0;
+                        flip = !flip;
+                        console.log('observer scroll, before=', before, 'after=', scroller.scrollTop);
+                    }
+                });
+                this._observer.observe(list, { childList: true, subtree: true });
+            }
+
             let flip = false;
             interval = setInterval(() => {
                 const before = scroller.scrollTop;
@@ -58,6 +86,10 @@
         stop(auto) {
             clearInterval(interval);
             interval = null;
+            if (this._observer) {
+                this._observer.disconnect();
+                this._observer = null;
+            }
             UI.hideModal();
             UI.setStatus(auto ? 'Reached top. Extracting…' : 'Stopped.');
             UI.enableSave();
