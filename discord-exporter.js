@@ -8,26 +8,14 @@
 // @grant        GM_download
 // ==/UserScript==
 
+/* eslint-disable */
 (function() {
     'use strict';
 
-    // IMPORT ALL MODULES (copy/paste from your folders)
-    // -------------------
-    // core/
-    const Config = (/* paste config.js here */).Config;
-    const Selectors = (/* paste selectors.js here */).Selectors;
-    const Dom = (/* paste dom.js here */).Dom;
-    const Log = (/* paste log.js here */).Log;
-
-    // slice/
-    const UI = (/* paste ui.js here */).UI;
-    const Scroll = (/* paste scroll.js here */).Scroll;
-    const Extract = (/* paste extract.js here */).Extract;
-    const Save = (/* paste save.js here */).Save;
-
-    // upgrade/
-    const UpgradeStickers = (/* paste stickers.js here */).UpgradeStickers;
-    const UpgradeAttachments = (/* paste attachments.js here */).UpgradeAttachments;
+    // Module implementations are concatenated above by the build script.
+    // The functions Config, Selectors, Dom, Log, UI, Scroll, Extract, Save,
+    // UpgradeStickers and UpgradeAttachments are defined earlier in the IIFE
+    // when `npm run build` is executed.
 
     // INIT
     const cfg = Config();

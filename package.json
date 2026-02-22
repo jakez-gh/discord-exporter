@@ -1,0 +1,19 @@
+{
+  "name": "discord-exporter",
+  "version": "1.0.0",
+  "description": "Tampermonkey script for exporting Discord chats",
+  "main": "build.js",
+  "scripts": {
+    "build": "node build.js",
+    "lint": "eslint .",
+    "prepare": "husky install"
+  },
+  "lint-staged": {
+    "*.js": "eslint --fix"
+  },
+  "devDependencies": {
+    "eslint": "^8.48.0",
+    "husky": "^8.0.0",
+    "lint-staged": "^13.2.0"
+  }
+}

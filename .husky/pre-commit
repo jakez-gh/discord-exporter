@@ -1,0 +1,17 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# build the userscript and ensure dist files are not committed
+npm run build
+
+git diff --cached --name-only | grep '^dist/' && {
+  echo "ERROR: build artifacts under dist/ should not be committed." >&2
+  exit 1
+}
+
+# lint staged files (fallback to full lint if lint-staged not configured)
+if [ -f package.json ]; then
+  npx lint-staged || npm run lint
+fi
+
+# additional security checks can be added here

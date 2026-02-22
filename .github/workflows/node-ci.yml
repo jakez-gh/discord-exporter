@@ -17,13 +17,20 @@ jobs:
           node-version: '20.x'
       - name: Install dependencies
         run: |
-          if [ -f package.json ]; then npm install; fi
+          if [ -f package.json ]; then npm ci; fi
       - name: Lint with ESLint
         run: |
           if [ -f package.json ]; then npx eslint . || exit 1; fi
       - name: Security audit
         run: |
           if [ -f package.json ]; then npm audit --audit-level=high || exit 1; fi
+      # SAST: additional scanners such as semgrep could be added here
+      - name: Build userscript
+        run: |
+          npm run build
+      - name: DAST placeholder
+        run: |
+          echo "No dynamic app to scan; add DAST steps when able."
 
   test:
     runs-on: ubuntu-latest
