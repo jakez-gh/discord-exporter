@@ -4,8 +4,10 @@ function Dom(Selectors) {
             return document.querySelector(Selectors.messageList);
         },
         scroller() {
-            const list = this.list();
-            return list?.closest('[class*="scroller"]') || null;
+            // return the message list; the correct scrollable parent will be
+            // determined by Scroll.start since Discord wraps the list in
+            // several divs and the class names change often.
+            return this.list() || null;
         },
         items() {
             const list = this.list();

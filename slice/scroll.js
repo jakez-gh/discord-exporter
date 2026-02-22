@@ -13,14 +13,15 @@
                 return UI.setStatus('Scroller not found.');
             }
 
-            // if the element we grabbed isn't actually scrollable yet try to
-            // find a deeper container that is.
-            if (scroller.scrollHeight <= scroller.clientHeight) {
-                const deeper = scroller.querySelector('[class*="scroller"]');
-                if (deeper && deeper.scrollHeight > deeper.clientHeight) {
-                    scroller = deeper;
-                    console.log('using deeper scroller', scroller);
-                }
+            // locate first ancestor that actually overflows; this is the
+            // element through which Discord implements scrolling.
+            let candidate = scroller;
+            while (candidate && candidate.scrollHeight <= candidate.clientHeight) {
+                candidate = candidate.parentElement;
+            }
+            if (candidate && candidate !== scroller) {
+                scroller = candidate;
+                console.log('using ancestor scroller', scroller);
             }
 
             lastCount = Dom.items().length;
