@@ -133,7 +133,7 @@ describe('Scroll module', () => {
         const domHelper = {
             scroller: () => scroller,
             list: () => null,
-            items: () => Array.from({ length: msgsCount })
+            items: () => Array.from({ length: msgsCount }).map((_, i) => ({ getAttribute: () => `m${i}` }))
         };
         const progressCalls = [];
         const uiStub = {
@@ -175,7 +175,7 @@ describe('Scroll module', () => {
         const domHelper = {
             scroller: () => scroller,
             list: () => null,
-            items: () => Array.from({ length: msgsCount })
+            items: () => Array.from({ length: msgsCount }).map((_,i)=>({getAttribute:()=>`m${i}`}))
         };
         const uiStub = {
             showModal: () => {},
@@ -259,5 +259,82 @@ describe('Scroll module', () => {
 
         clock.tick(10);
         expect(stopSpy.calledOnce).to.be.true;
+    });
+
+    it('updates progress beyond window size when DOM slides', () => {
+        let batch = 0;
+        const windowSize = 3;
+        const messages = [
+            ['a','b','c'],
+            ['d','e','f'],
+            ['g','h','i'],
+            ['j','k','l']
+        ];
+        const scroller = { scrollTop:0, scrollHeight:200, clientHeight:50 };
+        const domHelper = {
+            scroller:() => scroller,
+            list:() => null,
+            items:() => messages[batch].map(id=>({ getAttribute: ()=>id }))
+        };
+        const progress = [];
+        const uiStub = { showModal:()=>{}, setStatus:()=>{}, enableSave:()=>{}, hideModal:()=>{}, setProgress:v=>progress.push(v) };
+        const cfg = Config(); cfg.scrollIntervalMs = 10; cfg.scrollStallTimeoutMs = 1000;
+
+        const scroll = Scroll(cfg, domHelper, uiStub, console);
+        scroll.start();
+
+        // tick through batches, bumping the window each time
+        clock.tick(10); // first window
+        batch = 1;
+        clock.tick(10); // second window -> seen should now be 6
+        batch = 2;
+        clock.tick(10); // third window -> 9
+        batch = 3;
+        clock.tick(10); // fourth window -> 12
+
+        expect(progress.length).to.be.greaterThan(0);
+        expect(progress[progress.length-1]).to.equal(12/10000);
+        scroll.stop();
+    });
+
+    it('observer mutations reset stall count and prevent premature stop', () => {
+        const scroller = { scrollTop:0, scrollHeight:200, clientHeight:50 };
+        let items = [{ getAttribute: ()=>'x' }];
+        const domHelper = {
+            scroller:() => scroller,
+            list:() => ({}),
+            items:() => items
+        };
+        const uiStub = { showModal:()=>{}, setStatus:()=>{}, enableSave:()=>{}, hideModal:()=>{}, setProgress:()=>{} };
+        const cfg = Config(); cfg.scrollIntervalMs = 10; cfg.scrollStallTimeoutMs = 1000;
+
+        // capture observer callback; handle environment without MutationObserver
+        let observerCb;
+        const FakeObs = function(cb){ observerCb = cb; this.observe=()=>{}; this.disconnect=()=>{}; };
+        const hadMO = typeof global.MutationObserver !== 'undefined';
+        const origMO = global.MutationObserver;
+        global.MutationObserver = FakeObs;
+
+        const scroll = Scroll(cfg, domHelper, uiStub, console);
+        const stopSpy = sinon.spy(scroll,'stop');
+        scroll.start();
+
+        // run a few ticks with no DOM change but stay below stall threshold
+        clock.tick(30);
+        expect(stopSpy.called).to.be.false;
+
+        // now simulate a mutation that adds a new id
+        items = [{ getAttribute: ()=>'x' }, { getAttribute: ()=>'y' }];
+        observerCb();
+        // tick again and ensure we still haven't stopped
+        clock.tick(50);
+        expect(stopSpy.called).to.be.false;
+
+        // restore original
+        if (hadMO) {
+            global.MutationObserver = origMO;
+        } else {
+            delete global.MutationObserver;
+        }
     });
 });

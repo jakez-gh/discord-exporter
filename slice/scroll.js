@@ -24,15 +24,28 @@
                 console.log('using ancestor scroller', scroller);
             }
 
-            lastCount = Dom.items().length;
-            // helper to read first message id
+            // track number of unique message ids we've seen; Discord only keeps a
+            // sliding window of ~120 items in the DOM so the raw item count
+            // quickly plateaus.  Instead maintain a set of all ids encountered as
+            // we scroll and use its size for progress.
+            let seenIds = new Set();
+            const scanItems = () => {
+                const items = Dom.items();
+                for (let i = 0; i < items.length; i++) {
+                    const id = items[i] && items[i].getAttribute && items[i].getAttribute('id');
+                    if (id && !seenIds.has(id)) {
+                        seenIds.add(id);
+                    }
+                }
+            };
+            scanItems();
+            let seenCount = seenIds.size;
+
+            // helper to read first message id for stall detection/update reasons
             const getFirstId = () => {
                 const first = Dom.items()[0];
                 return first ? (first.getAttribute('id') || '') : null;
             };
-            // initialize maxCount with current value
-            let maxCount = lastCount;
-            // track id of first message so we can detect real progress
             let lastFirstId = getFirstId();
             lastChange = Date.now();
 
@@ -40,7 +53,7 @@
 
             // build status helper including oldest message timestamp
             const updateStatus = () => {
-                const count = maxCount; // use monotonic highest seen
+                const count = seenCount; // use number of unique ids seen
                 let ts = 'unknown';
                 const first = Dom.items()[0];
                 if (first) {
@@ -64,7 +77,22 @@
             if (list) {
                 this._observer = new MutationObserver(muts => {
                     if (interval) {
-                        // when messages appear, try scrolling up again immediately
+                        // a DOM mutation occurred; scan for new ids and treat this
+                        // as progress so we don't count it as a stall.  the
+                        // observer usually fires shortly before or after Discord
+                        // updates the list during network fetches.
+                        scanItems();
+                        const newSeen = seenIds.size;
+                        if (newSeen !== seenCount) {
+                            seenCount = newSeen;
+                            lastChange = Date.now();
+                            updateStatus();
+                            if (UI.setProgress) {
+                                UI.setProgress(Math.min(seenCount / 10000, 1));
+                            }
+                        }
+                        stallCount = 0;
+
                         const before = scroller.scrollTop;
                         scroller.scrollTop = 0;
                         console.log('observer scroll, before=', before, 'after=', scroller.scrollTop);
@@ -98,17 +126,19 @@
                 }
                 console.log('scroller.scrollTop set, before=', before, 'after=', scroller.scrollTop,'dirUp=',directionUp);
 
+                // refresh seenIds before computing progress
+                scanItems();
                 const count = Dom.items().length;
                 const currentFirst = getFirstId();
                 const firstChanged = currentFirst && currentFirst !== lastFirstId;
-                if (count !== lastCount || firstChanged) {
-                    lastCount = count;
-                    if (count > maxCount) maxCount = count;
+                const newSeenCount = seenIds.size;
+                if (newSeenCount !== seenCount || firstChanged) {
+                    seenCount = newSeenCount;
                     if (currentFirst) lastFirstId = currentFirst;
                     lastChange = Date.now();
                     updateStatus();
                     if (UI.setProgress) {
-                        UI.setProgress(Math.min(maxCount / 10000, 1));
+                        UI.setProgress(Math.min(seenCount / 10000, 1));
                     }
                     stallCount = 0; // reset stall when progress seen
                 } else {
