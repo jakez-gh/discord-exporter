@@ -1,0 +1,34 @@
+name: Node.js CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+      - name: Install dependencies
+        run: |
+          if [ -f package.json ]; then npm install; fi
+      - name: Lint with ESLint
+        run: |
+          if [ -f package.json ]; then npx eslint . || exit 1; fi
+      - name: Security audit
+        run: |
+          if [ -f package.json ]; then npm audit --audit-level=high || exit 1; fi
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run simple check
+        run: |
+          echo "No tests defined yet."

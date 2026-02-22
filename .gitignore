@@ -1,0 +1,20 @@
+# Node artifacts
+node_modules/
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+
+# Visual Studio Code
+.vscode/
+
+# temp files
+*.log
+.temp*
+
+# build outputs
+dist/
+build/
+
+# OS files
+.DS_Store
+Thumbs.db
