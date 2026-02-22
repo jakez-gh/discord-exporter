@@ -168,6 +168,45 @@ describe('Scroll module', () => {
         scroll.stop();
     });
 
+    it('keeps message count monotonic even if items decrease', () => {
+        let msgsCount = 10;
+        const scroller = { scrollTop: 0, scrollHeight: 200, clientHeight: 50 };
+        const statuses = [];
+        const domHelper = {
+            scroller: () => scroller,
+            list: () => null,
+            items: () => Array.from({ length: msgsCount })
+        };
+        const uiStub = {
+            showModal: () => {},
+            setStatus: msg => statuses.push(msg),
+            enableSave: () => {},
+            hideModal: () => {}
+        };
+        const cfg = Config();
+        cfg.scrollIntervalMs = 10;
+        cfg.scrollStallTimeoutMs = 1000;
+
+        const scroll = Scroll(cfg, domHelper, uiStub, console);
+        scroll.start();
+
+        // first tick sees 10 messages
+        clock.tick(10);
+        expect(statuses[statuses.length-1]).to.match(/10 messages seen/);
+
+        // now simulate a drop to 5; status should still report 10
+        msgsCount = 5;
+        clock.tick(10);
+        expect(statuses[statuses.length-1]).to.match(/10 messages seen/);
+
+        // later increase above previous max
+        msgsCount = 20;
+        clock.tick(10);
+        expect(statuses[statuses.length-1]).to.match(/20 messages seen/);
+
+        scroll.stop();
+    });
+
     it('does not stop when first message ID keeps changing', () => {
         let firstId = 'a';
         const scroller = { scrollTop: 0, scrollHeight: 200, clientHeight: 50 };
