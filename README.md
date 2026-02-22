@@ -21,10 +21,18 @@ The `dist` folder is ignored by Git so build outputs are never persisted.
 
 ### Inventory strategy
 
-To aid both humans and LLMs in understanding project structure we maintain a
-root‑level inventory file at `docs/INVENTORY.md`.  A quality‑gate script
-(`tests/tools/inventory_quality_gate.py`) runs on every commit and CI job, flagging
-any files or directories that are not documented.
+Each visible directory must contain an `inventory.md` file; see
+`docs/inventory_guidelines.md` for writing rules.  The guidelines require a
+folder description and a bullet/table entry for every sibling file and
+subdirectory, with optional `in_scope`, `out_scope`, and `notes` sections.
+
+The CI pipeline runs `tests/tools/inventory_rules.py` (a superset of the earlier
+simple gate) on every commit/PR.  It enforces:
+
+* presence of inventory.md in every folder
+* sufficient folder and item descriptions
+* one-to-one correspondence between filesystem and inventory
+* uniqueness of each item description
 
 ### Initialising a new repository
 

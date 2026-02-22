@@ -65,11 +65,15 @@ repo and runs on every `push` or `pull_request` against the `main` branch.
 A couple of extra checks have been folded in from other projects and are
 persisted here:
 
-* **Inventory completeness** – every visible file/directory at the repository
-  root must be listed in `docs/INVENTORY.md`.  This script is a pared‑down
-dialogue of the more comprehensive gate in [the `autoplay` project]
-(https://github.com/jakez-gh/autoplay/blob/main/tests/tools/inventory_quality_gate.py).
-  The goal is to catch forgotten files early.
+* **Inventory completeness & correctness** – the inventory rules script
+  (`tests/tools/inventory_rules.py`) inspects every visible folder, confirming
+  that `inventory.md` exists, describes the folder, lists each file/folder with
+  a unique, sufficiently long description, and contains no extraneous entries.
+  This behaviour was inspired by the comprehensive gate in the
+  `autoplay` repository (see
+  https://github.com/jakez-gh/autoplay/blob/main/tests/tools/inventory_quality_gate.py)
+  but covers the expanded requirements described in
+  `docs/inventory_guidelines.md` (also committed).
 
 * **Quality‑gates documentation** – ensures this very document exists and
   actually *describes what should and should not be contained within it*.
