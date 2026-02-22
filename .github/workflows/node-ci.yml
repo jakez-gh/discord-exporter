@@ -9,6 +9,8 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    outputs:
+      lint-result: ${{ steps.lintoutcome.outcome }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Node.js
@@ -19,23 +21,93 @@ jobs:
         run: |
           if [ -f package.json ]; then npm ci; fi
       - name: Lint with ESLint
+        id: lintoutcome
         run: |
           if [ -f package.json ]; then npx eslint . || exit 1; fi
       - name: Security audit
         run: |
           if [ -f package.json ]; then npm audit --audit-level=high || exit 1; fi
-      # SAST: additional scanners such as semgrep could be added here
+
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      build-result: ${{ steps.buildoutcome.outcome }}
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+      - name: Install dependencies
+        run: |
+          if [ -f package.json ]; then npm ci; fi
       - name: Build userscript
+        id: buildoutcome
         run: |
           npm run build
       - name: DAST placeholder
         run: |
           echo "No dynamic app to scan; add DAST steps when able."
 
-  test:
+  security:
     runs-on: ubuntu-latest
+    needs: [lint]
     steps:
       - uses: actions/checkout@v4
-      - name: Run simple check
+      - name: Secret scan (Gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        continue-on-error: true
+      - name: Dependency review (PR only)
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v4
+        continue-on-error: true
+
+  quality-gate:
+    needs: [lint, build, security]
+    runs-on: ubuntu-latest
+    name: Quality Gate Check
+    steps:
+      - name: Verify all checks passed
         run: |
-          echo "No tests defined yet."
+          echo "=== Quality Gate Status ==="
+          echo "Lint: ${{ needs.lint.result }}"
+          echo "Build: ${{ needs.build.result }}"
+          echo "Security: ${{ needs.security.result }}"
+
+          if [ "${{ needs.lint.result }}" != "success" ]; then
+            echo "❌ Lint checks FAILED - BLOCKING MERGE"
+            exit 1
+          fi
+          if [ "${{ needs.build.result }}" != "success" ]; then
+            echo "❌ Build FAILED - BLOCKING MERGE"
+            exit 1
+          fi
+          echo "✅ All BLOCKING quality gates passed"
+
+  comment-results:
+    needs: [lint, build, security]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && always()
+    name: Comment PR with Results
+    steps:
+      - name: Comment PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const lint = '${{ needs.lint.result }}';
+            const build = '${{ needs.build.result }}';
+            const security = '${{ needs.security.result }}';
+            let comment = '## Quality Gate Results\n\n';
+            comment += lint === 'success' ? '✅' : '❌';
+            comment += ` Lint & Audit\n`;
+            comment += build === 'success' ? '✅' : '❌';
+            comment += ` Build\n`;
+            comment += security === 'success' ? '✅' : '⚠️';
+            comment += ` Security scans (non-blocking)\n`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
