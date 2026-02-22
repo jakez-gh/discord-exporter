@@ -60,6 +60,22 @@ repo and runs on every `push` or `pull_request` against the `main` branch.
 - You can enable CodeQL, Dependabot or other GitHub‑level security offerings
   by adding or editing YAML files in the same directory.
 
+## Additional custom gates
+
+A couple of extra checks have been folded in from other projects and are
+persisted here:
+
+* **Inventory completeness** – every visible file/directory at the repository
+  root must be listed in `docs/INVENTORY.md`.  This script is a pared‑down
+dialogue of the more comprehensive gate in [the `autoplay` project]
+(https://github.com/jakez-gh/autoplay/blob/main/tests/tools/inventory_quality_gate.py).
+  The goal is to catch forgotten files early.
+
+* **Quality‑gates documentation** – ensures this very document exists and
+  actually *describes what should and should not be contained within it*.
+  This gate was created specifically for this repository in response to a
+  request, but it’s documented here so it travels with the repo.
+
 ## Ensuring persistence
 To guarantee the gates survive a fresh clone:
 

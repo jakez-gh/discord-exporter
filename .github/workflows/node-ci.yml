@@ -28,6 +28,19 @@ jobs:
         run: |
           if [ -f package.json ]; then npm audit --audit-level=high || exit 1; fi
 
+      - name: Set up Python for additional gates
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run inventory quality gate
+        run: |
+          python tests/tools/inventory_quality_gate.py || exit 1
+
+      - name: Check quality-gates documentation exists
+        run: |
+          python tests/tools/check_gates_doc.py || exit 1
+
   build:
     runs-on: ubuntu-latest
     outputs:
