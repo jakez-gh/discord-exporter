@@ -50,11 +50,31 @@ describe('UI module', () => {
         const li = document.createElement('li');
         list.appendChild(li);
 
-        // advance a few cycles to let poll notice
-        clock.tick(600);
+        // advance enough time to pass 500ms threshold
+        clock.tick(700);
         expect(document.getElementById(Config().ui.statusId).textContent).to.equal('Ready.');
     });
 
+    it('does not mark ready until console quiets', () => {
+        const selectors = { messageList: '#msgs', messageItem: 'li' };
+        const domHelper = {
+            items: () => [document.createElement('li')]
+        };
+        const ui = UIFactory(Config(), console);
+        ui.init({ dom: domHelper, onStart: () => {}, onStop: () => {}, onSaveTxt:() => {}, onSaveJson:() => {} });
+
+        // immediately after init, status may still be waiting because of log override
+        expect(document.getElementById(Config().ui.statusId).textContent).to.match(/Waiting/);
+        // simulate console noise
+        console.log('noisy');
+        clock.tick(300);
+        // still waiting because less than 500ms since last log
+        expect(document.getElementById(Config().ui.statusId).textContent).to.match(/Waiting/);
+
+        // now allow quiet
+        clock.tick(300);
+        expect(document.getElementById(Config().ui.statusId).textContent).to.equal('Ready.');
+    });
     it('creates a progress bar and setProgress adjusts width', () => {
         const selectors = { messageList: '#msgs', messageItem: 'li' };
         const domHelper = { items: () => [] };

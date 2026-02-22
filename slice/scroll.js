@@ -75,20 +75,26 @@
 
             // direction flag: normally scroll upward; only go downward when stuck
             let directionUp = true;
+            let stallCount = 0; // consecutive ticks at top with no progress
             interval = setInterval(() => {
                 const before = scroller.scrollTop;
-                if (directionUp) {
+                // normally we always try moving upward; only attempt a downward
+                // nudge if we were already moving downward and we're not at the top.
+                // this prevents a back‑and‑forth once we hit scrollTop===0.
+                if (directionUp || before === 0) {
                     scroller.scrollTop = 0;
                 } else {
                     scroller.scrollTop = scroller.scrollHeight;
                 }
                 // adjust direction based on whether movement occurred
                 if (scroller.scrollTop !== before) {
-                    // resumed progress toward top
+                    // progress occurred (likely upward), reset to upward mode
                     directionUp = true;
                 } else {
-                    // no change; flip direction for next tick so we nudge bottom
-                    directionUp = !directionUp;
+                    // no change; only flip if we aren't sitting at top
+                    if (before !== 0) {
+                        directionUp = !directionUp;
+                    }
                 }
                 console.log('scroller.scrollTop set, before=', before, 'after=', scroller.scrollTop,'dirUp=',directionUp);
 
@@ -104,17 +110,21 @@
                     if (UI.setProgress) {
                         UI.setProgress(Math.min(maxCount / 10000, 1));
                     }
-                } else if (Date.now() - lastChange > 10000) {
-                    // been scrolling without new messages for 10s; refresh timestamp
-                    updateStatus();
+                    stallCount = 0; // reset stall when progress seen
+                } else {
+                    // no progress this tick
+                    if (Date.now() - lastChange > 10000) {
+                        // been scrolling without new messages for 10s; refresh timestamp
+                        updateStatus();
+                    }
+                    if (scroller.scrollTop === before && scroller.scrollTop === 0) {
+                        stallCount++;
+                    } else {
+                        stallCount = 0;
+                    }
                 }
-
-                // only consider ourselves done when the scrollTop has not
-                // changed _and_ we are already at the top of the container, and
-                // the first message hasn't shifted in a while.
-                if (scroller.scrollTop === before &&
-                    Date.now() - lastChange > Config.scrollStallTimeoutMs &&
-                    scroller.scrollTop === 0) {
+                if (stallCount >= 3 && Date.now() - lastChange > Config.scrollStallTimeoutMs) {
+                    console.log('auto-stop triggered after', stallCount, 'stalls');
                     this.stop(true);
                 }
             }, Config.scrollIntervalMs);

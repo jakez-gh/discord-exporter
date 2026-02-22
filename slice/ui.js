@@ -9,13 +9,23 @@
             this.createPanel();
             this.makeDraggable();
 
-            // start with a tentative message and poll until we see content
+            // start with a tentative message and poll until we see content *and* things quiet down
+            let lastLog = 0;
+            const origLog = console.log;
+            console.log = (...args) => {
+                lastLog = Date.now();
+                origLog.apply(console, args);
+            };
+
             const check = () => {
                 let count = 0;
                 if (this.dom) {
                     count = this.dom.items().length;
                 }
-                if (count > 0) {
+                const now = Date.now();
+                if (count > 0 && now - lastLog >= 500) {
+                    // restore original log
+                    console.log = origLog;
                     this.setStatus('Ready.');
                 } else {
                     this.setStatus(`Waiting for chat messages (${count} seen)…`);

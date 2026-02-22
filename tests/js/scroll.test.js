@@ -72,11 +72,11 @@ describe('Scroll module', () => {
         clock.tick(10);
         expect(scroller.scrollTop).to.equal(0);
 
-        // tick third time: because stuck, should go to bottom once
+        // tick third time: still at top since algorithm no longer jumps to bottom
         clock.tick(10);
-        expect(scroller.scrollTop).to.equal(200);
+        expect(scroller.scrollTop).to.equal(0);
 
-        // tick again: after seeing bottom, should try top again next
+        // tick again: remain at top
         clock.tick(10);
         expect(scroller.scrollTop).to.equal(0);
 
@@ -119,10 +119,11 @@ describe('Scroll module', () => {
         clock.tick(100);
         expect(stopSpy.called).to.be.false;
 
-        // now allow reaching top and trigger it
+        // now allow reaching top and trigger it; require multiple stalls
         allowSetTop = true;
         scroller.scrollTop = 0;
-        clock.tick(10);
+        // make enough ticks to satisfy consecutive stall condition
+        clock.tick(50);
         expect(stopSpy.calledOnce).to.be.true;
     });
 
@@ -195,5 +196,29 @@ describe('Scroll module', () => {
         scroller.scrollTop = 0;
         clock.tick(100);
         expect(stopSpy.called).to.be.true;
+    });
+
+    it('requires multiple consecutive stalls at top before auto-stop', () => {
+        const scroller = { scrollTop: 0, scrollHeight: 200, clientHeight: 50 };
+        const domHelper = { scroller: () => scroller, list: () => null, items: () => [] };
+        const uiStub = { showModal: () => {}, setStatus: () => {}, enableSave: () => {}, hideModal: () => {} };
+        const cfg = Config();
+        cfg.scrollIntervalMs = 10;
+        cfg.scrollStallTimeoutMs = 30;
+
+        const scroll = Scroll(cfg, domHelper, uiStub, console);
+        const stopSpy = sinon.spy(scroll, 'stop');
+        scroll.start();
+
+        // simulate not at top then consecutive stalls
+        scroller.scrollTop = 1;
+        clock.tick(10);
+        scroller.scrollTop = 0;
+        clock.tick(10);
+        clock.tick(10);
+        expect(stopSpy.called).to.be.false;
+
+        clock.tick(10);
+        expect(stopSpy.calledOnce).to.be.true;
     });
 });
