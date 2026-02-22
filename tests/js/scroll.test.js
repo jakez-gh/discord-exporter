@@ -82,4 +82,118 @@ describe('Scroll module', () => {
 
         scroll.stop();
     });
+
+    it('does not stop until the top is reached even if stall occurs', () => {
+        // scroller ignores assignments to zero until we allow it; keeps value at 50
+        let allowSetTop = false;
+        const scroller = {
+            _top: 50,
+            get scrollTop() { return this._top; },
+            set scrollTop(v) {
+                if (v === 0 && !allowSetTop) return;
+                this._top = v;
+            },
+            scrollHeight: 200,
+            clientHeight: 50
+        };
+        const domHelper = {
+            scroller: () => scroller,
+            list: () => null,
+            items: () => []
+        };
+        const uiStub = {
+            showModal: () => {},
+            setStatus: () => {},
+            enableSave: () => {},
+            hideModal: () => {}
+        };
+        const cfg = Config();
+        cfg.scrollIntervalMs = 10;
+        cfg.scrollStallTimeoutMs = 30;
+
+        const scroll = Scroll(cfg, domHelper, uiStub, console);
+        const stopSpy = sinon.spy(scroll, 'stop');
+        scroll.start();
+
+        // advance beyond stall timeout; stop should NOT be called because top never reached
+        clock.tick(100);
+        expect(stopSpy.called).to.be.false;
+
+        // now allow reaching top and trigger it
+        allowSetTop = true;
+        scroller.scrollTop = 0;
+        clock.tick(10);
+        expect(stopSpy.calledOnce).to.be.true;
+    });
+
+    it('calls UI.setProgress when message count increases', () => {
+        let msgsCount = 0;
+        const scroller = { scrollTop: 0, scrollHeight: 200, clientHeight: 50 };
+        const domHelper = {
+            scroller: () => scroller,
+            list: () => null,
+            items: () => Array.from({ length: msgsCount })
+        };
+        const progressCalls = [];
+        const uiStub = {
+            showModal: () => {},
+            setStatus: () => {},
+            enableSave: () => {},
+            hideModal: () => {},
+            setProgress: v => progressCalls.push(v)
+        };
+        const cfg = Config();
+        cfg.scrollIntervalMs = 10;
+        cfg.scrollStallTimeoutMs = 1000;
+
+        const scroll = Scroll(cfg, domHelper, uiStub, console);
+        scroll.start();
+
+        // initially no messages
+        clock.tick(10);
+        expect(progressCalls).to.be.empty;
+
+        // simulate messages
+        msgsCount = 500;
+        clock.tick(10);
+        expect(progressCalls.length).to.equal(1);
+        expect(progressCalls[0]).to.equal(500/10000);
+
+        msgsCount = 2000;
+        clock.tick(10);
+        expect(progressCalls.length).to.equal(2);
+        expect(progressCalls[1]).to.equal(2000/10000);
+
+        scroll.stop();
+    });
+
+    it('does not stop when first message ID keeps changing', () => {
+        let firstId = 'a';
+        const scroller = { scrollTop: 0, scrollHeight: 200, clientHeight: 50 };
+        const domHelper = {
+            scroller: () => scroller,
+            list: () => null,
+            items: () => [{ getAttribute: () => firstId }]
+        };
+        const uiStub = { showModal: () => {}, setStatus: () => {}, enableSave: () => {}, hideModal: () => {} };
+        const cfg = Config();
+        cfg.scrollIntervalMs = 10;
+        cfg.scrollStallTimeoutMs = 30;
+
+        const scroll = Scroll(cfg, domHelper, uiStub, console);
+        const stopSpy = sinon.spy(scroll, 'stop');
+        scroll.start();
+
+        // change id each interval for a while
+        for (let i = 0; i < 5; i++) {
+            clock.tick(10);
+            firstId = String.fromCharCode(98 + i);
+        }
+        expect(stopSpy.called).to.be.false;
+
+        // now freeze and allow reaching top
+        scroller.scrollTop = 0;
+        clock.tick(100);
+        expect(stopSpy.called).to.be.true;
+    });
 });

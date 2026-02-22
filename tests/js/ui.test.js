@@ -54,4 +54,17 @@ describe('UI module', () => {
         clock.tick(600);
         expect(document.getElementById(Config().ui.statusId).textContent).to.equal('Ready.');
     });
+
+    it('creates a progress bar and setProgress adjusts width', () => {
+        const selectors = { messageList: '#msgs', messageItem: 'li' };
+        const domHelper = { items: () => [] };
+        const ui = UIFactory(Config(), console);
+        ui.init({ dom: domHelper, onStart: () => {}, onStop: () => {}, onSaveTxt:() => {}, onSaveJson:() => {} });
+        const bar = document.getElementById(Config().ui.progressBarId);
+        expect(bar).to.exist;
+        ui.setProgress(0.3);
+        expect(bar.style.width).to.equal('30%');
+        ui.setProgress(1);
+        expect(bar.style.width).to.equal('100%');
+    });
 });

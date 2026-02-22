@@ -37,6 +37,9 @@
                 <button id="dmexp-save-txt" disabled>Save TXT</button>
                 <button id="dmexp-save-json" disabled>Save JSON</button>
                 <div id="${Config.ui.statusId}"></div>
+                <div id="${Config.ui.progressId}" style="width:100%;background:#444;margin-top:4px;">
+                    <div id="${Config.ui.progressBarId}" style="width:0%;height:6px;background:#0f0;transition:width 0.2s;"></div>
+                </div>
             `;
             document.body.appendChild(panel);
 
@@ -117,6 +120,12 @@
         enableSave() {
             document.getElementById('dmexp-save-txt').disabled = false;
             document.getElementById('dmexp-save-json').disabled = false;
+        },
+        setProgress(frac) {
+            const bar = document.getElementById(Config.ui.progressBarId);
+            if (bar) {
+                bar.style.width = `${Math.floor(frac * 100)}%`;
+            }
         },
         makeDraggable() {
             const panel = document.getElementById(Config.ui.panelId);

@@ -25,18 +25,33 @@
             }
 
             lastCount = Dom.items().length;
+            // helper to read first message id
+            const getFirstId = () => {
+                const first = Dom.items()[0];
+                return first ? (first.getAttribute('id') || '') : null;
+            };
+            // initialize maxCount with current value
+            let maxCount = lastCount;
+            // track id of first message so we can detect real progress
+            let lastFirstId = getFirstId();
             lastChange = Date.now();
 
             UI.showModal('Scrolling…');
 
             // build status helper including oldest message timestamp
             const updateStatus = () => {
-                const count = Dom.items().length;
+                const count = maxCount; // use monotonic highest seen
                 let ts = 'unknown';
                 const first = Dom.items()[0];
                 if (first) {
-                    const t = first.querySelector('time');
-                    if (t && t.dateTime) ts = new Date(t.dateTime).toLocaleString();
+                    if (typeof first.querySelector === 'function') {
+                        const t = first.querySelector('time');
+                        if (t && t.dateTime) ts = new Date(t.dateTime).toLocaleString();
+                    } else if (first.getAttribute) {
+                        // try to read a datetime attribute if present
+                        const dt = first.getAttribute('datetime') || first.getAttribute('data-datetime');
+                        if (dt) ts = new Date(dt).toLocaleString();
+                    }
                 }
                 UI.setStatus(`Scrolling… ${count} messages seen (oldest ${ts})`);
             };
@@ -78,17 +93,28 @@
                 console.log('scroller.scrollTop set, before=', before, 'after=', scroller.scrollTop,'dirUp=',directionUp);
 
                 const count = Dom.items().length;
-                if (count !== lastCount) {
+                const currentFirst = getFirstId();
+                const firstChanged = currentFirst && currentFirst !== lastFirstId;
+                if (count !== lastCount || firstChanged) {
                     lastCount = count;
+                    if (count > maxCount) maxCount = count;
+                    if (currentFirst) lastFirstId = currentFirst;
                     lastChange = Date.now();
                     updateStatus();
+                    if (UI.setProgress) {
+                        UI.setProgress(Math.min(maxCount / 10000, 1));
+                    }
                 } else if (Date.now() - lastChange > 10000) {
                     // been scrolling without new messages for 10s; refresh timestamp
                     updateStatus();
                 }
 
+                // only consider ourselves done when the scrollTop has not
+                // changed _and_ we are already at the top of the container, and
+                // the first message hasn't shifted in a while.
                 if (scroller.scrollTop === before &&
-                    Date.now() - lastChange > Config.scrollStallTimeoutMs) {
+                    Date.now() - lastChange > Config.scrollStallTimeoutMs &&
+                    scroller.scrollTop === 0) {
                     this.stop(true);
                 }
             }, Config.scrollIntervalMs);
