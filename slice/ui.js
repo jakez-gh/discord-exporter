@@ -133,6 +133,10 @@
             let offset = [0,0];
             panel.addEventListener('mousedown', function(e) {
                 isDown = true;
+                // remove right/bottom anchors so left/top moves the box instead of
+                // causing it to resize due to conflicting constraints
+                panel.style.right = '';
+                panel.style.bottom = '';
                 offset = [panel.offsetLeft - e.clientX, panel.offsetTop - e.clientY];
             }, true);
             document.addEventListener('mouseup', function() {
