@@ -2,6 +2,11 @@
     let interval = null;
     let lastChange = 0;
     let lastCount = 0;
+    // persistent buffer of seen message ids and their order.  tracked across
+    // calls so tests and later extraction can consult it.
+    let seenIds = new Set();
+    let seenOrder = [];
+    let seenCount = 0;
     console.log('Scroll module initialized, file slice/scroll.js');
 
     return {
@@ -24,22 +29,24 @@
                 console.log('using ancestor scroller', scroller);
             }
 
-            // track number of unique message ids we've seen; Discord only keeps a
-            // sliding window of ~120 items in the DOM so the raw item count
-            // quickly plateaus.  Instead maintain a set of all ids encountered as
-            // we scroll and use its size for progress.
-            let seenIds = new Set();
+            // reset buffer each time we start scrolling so earlier runs don't
+            // contaminate the counts.
+            seenIds.clear();
+            seenOrder.length = 0;
+            seenCount = 0;
+
             const scanItems = () => {
                 const items = Dom.items();
                 for (let i = 0; i < items.length; i++) {
                     const id = items[i] && items[i].getAttribute && items[i].getAttribute('id');
                     if (id && !seenIds.has(id)) {
                         seenIds.add(id);
+                        seenOrder.push(id);
                     }
                 }
             };
             scanItems();
-            let seenCount = seenIds.size;
+            seenCount = seenIds.size;
 
             // helper to read first message id for stall detection/update reasons
             const getFirstId = () => {
@@ -170,6 +177,11 @@
             UI.hideModal();
             UI.setStatus(auto ? 'Reached top. Extracting…' : 'Stopped.');
             UI.enableSave();
+        },
+
+        getSeenOrder() {
+            // return a copy so callers can't mutate our internal buffer
+            return seenOrder.slice();
         }
     };
 }

@@ -1,24 +1,49 @@
 {
   "name": "discord-exporter",
-  "version": "3.3.27",
+  "version": "3.3.33",
   "description": "Tampermonkey script for exporting Discord chats",
   "main": "build.js",
   "scripts": {
     "build": "node build.js",
     "lint": "eslint .",
+    "mdlint": "markdownlint 'docs/**/*.md' --config .markdownlint.json",
+    "mdfix": "markdownlint 'docs/**/*.md' --config .markdownlint.json --fix",
     "test": "mocha tests/js --recursive --exit",
+    "coverage": "nyc npm run test",
+    "test:ci": "nyc --reporter=text --reporter=lcov npm run test",
     "prepare": "husky install"
   },
   "lint-staged": {
     "*.js": "eslint --fix"
   },
   "devDependencies": {
+    "chai": "^4.3.8",
     "eslint": "^8.48.0",
     "husky": "^8.0.0",
+    "jsdom": "^22.1.0",
     "lint-staged": "^13.2.0",
+    "markdownlint-cli": "^0.32.2",
     "mocha": "^10.2.0",
-    "chai": "^4.3.8",
-    "sinon": "^15.0.2",
-    "jsdom": "^22.1.0"
+    "nyc": "^15.1.0",
+    "sinon": "^15.0.2"
+  },
+  "nyc": {
+    "include": [
+      "slice/**/*.js",
+      "core/**/*.js"
+    ],
+    "exclude": [
+      "tests/**"
+    ],
+    "reporter": [
+      "text-summary",
+      "lcov"
+    ],
+    "all": true,
+    "check-coverage": true,
+    "statements": 70,
+    "branches": 60,
+    "functions": 50,
+    "lines": 70
   }
 }

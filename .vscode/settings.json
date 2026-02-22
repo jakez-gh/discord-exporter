@@ -1,0 +1,5 @@
+{
+    "problems.exclude": {
+        "**/test-data/**": true
+    }
+}

@@ -19,9 +19,11 @@ describe('UI module', () => {
         global.document = document;
         global.window = window;
         clock = sinon.useFakeTimers();
+        sandbox = sinon.createSandbox();
     });
     afterEach(() => {
         clock.restore();
+        sandbox.restore();
         delete global.document;
         delete global.window;
     });
@@ -75,6 +77,21 @@ describe('UI module', () => {
         clock.tick(300);
         expect(document.getElementById(Config().ui.statusId).textContent).to.equal('Ready.');
     });
+
+    it('logs status updates to console', () => {
+        // ensure status element exists so setStatus writes to it
+        const el = document.createElement('div');
+        el.id = Config().ui.statusId;
+        document.body.appendChild(el);
+
+        const logSpy = sinon.spy(console, 'log');
+        const ui = UIFactory(Config(), console);
+        ui.setStatus('foo');
+        ui.setStatus('bar');
+        expect(logSpy.calledWith('Status update:', 'foo')).to.be.true;
+        expect(logSpy.calledWith('Status update:', 'bar')).to.be.true;
+        logSpy.restore();
+    });
     it('creates a progress bar and setProgress adjusts width', () => {
         const selectors = { messageList: '#msgs', messageItem: 'li' };
         const domHelper = { items: () => [] };
@@ -86,5 +103,32 @@ describe('UI module', () => {
         expect(bar.style.width).to.equal('30%');
         ui.setProgress(1);
         expect(bar.style.width).to.equal('100%');
+    });
+
+    it('locks panel dimensions when dragging so it moves rather than resizes', () => {
+        const ui = UIFactory(Config(), console);
+        ui.init({ dom: { items: () => [] }, onStart: () => {}, onStop: () => {}, onSaveTxt:() => {}, onSaveJson:() => {} });
+        const panel = document.getElementById(Config().ui.panelId);
+
+        // simulate a measured panel by faking offsetWidth/offsetHeight
+        Object.defineProperty(panel, 'offsetWidth', { value: 123, configurable: true });
+        Object.defineProperty(panel, 'offsetHeight', { value: 45, configurable: true });
+
+        // dispatch mousedown on interior of panel
+        const down = new window.MouseEvent('mousedown', { clientX: 10, clientY: 20, bubbles: true });
+        panel.dispatchEvent(down);
+
+        // after mousedown dimensions should be explicitly set
+        expect(panel.style.width).to.equal('123px');
+        expect(panel.style.height).to.equal('45px');
+
+        // simulate a move; size should remain unchanged
+        const move = new window.MouseEvent('mousemove', { clientX: 20, clientY: 30, bubbles: true });
+        document.dispatchEvent(move);
+        expect(panel.style.width).to.equal('123px');
+        expect(panel.style.height).to.equal('45px');
+        // left/top should have been updated, which indicates move happened
+        expect(panel.style.left).to.match(/px$/);
+        expect(panel.style.top).to.match(/px$/);
     });
 });

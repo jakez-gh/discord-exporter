@@ -9,12 +9,15 @@ const Scroll = require('../../slice/scroll');
 
 describe('Scroll module', () => {
     let clock;
+    let sandbox;
 
     beforeEach(() => {
         clock = sinon.useFakeTimers();
+        sandbox = sinon.createSandbox();
     });
     afterEach(() => {
         clock.restore();
+        sandbox.restore();
     });
 
     it('chooses the first overflowing ancestor as the scroller', () => {
@@ -203,6 +206,30 @@ describe('Scroll module', () => {
         msgsCount = 20;
         clock.tick(10);
         expect(statuses[statuses.length-1]).to.match(/20 messages seen/);
+
+        scroll.stop();
+    });
+
+    it('maintains seen-order buffer without duplicates', () => {
+        let ids = ['a','b','c'];
+        const scroller = { scrollTop:0, scrollHeight:200, clientHeight:50 };
+        const domHelper = {
+            scroller:() => scroller,
+            list:() => null,
+            items:() => ids.map(id=>({getAttribute:()=>id}))
+        };
+        const uiStub = { showModal:()=>{}, setStatus:()=>{}, enableSave:()=>{}, hideModal:()=>{}, setProgress:()=>{} };
+        const cfg = Config(); cfg.scrollIntervalMs=10; cfg.scrollStallTimeoutMs=1000;
+
+        const scroll = Scroll(cfg, domHelper, uiStub, console);
+        scroll.start();
+        clock.tick(10);
+        expect(scroll.getSeenOrder()).to.deep.equal(['a','b','c']);
+
+        // overlapping window: next items include duplicates and a new one
+        ids = ['b','c','d'];
+        clock.tick(10);
+        expect(scroll.getSeenOrder()).to.deep.equal(['a','b','c','d']);
 
         scroll.stop();
     });

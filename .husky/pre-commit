@@ -1,6 +1,9 @@
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
+# fix markdown problems automatically before commit
+npm run mdfix || true
+
 # semantic version guard (updates package.json and rebuilds if needed)
 if command -v python >/dev/null 2>&1; then
   python tests/tools/version_gate.py || exit 1
