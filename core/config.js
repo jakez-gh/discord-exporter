@@ -10,3 +10,8 @@ function Config() {
         }
     };
 }
+
+// support CommonJS require for tests
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Config;
+}

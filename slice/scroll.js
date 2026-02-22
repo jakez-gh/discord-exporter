@@ -41,39 +41,50 @@
                 UI.setStatus(`Scrolling… ${count} messages seen (oldest ${ts})`);
             };
 
+            // show the first status immediately so the panel isn't blank
+            updateStatus();
+
             // use an observer to trigger immediate scrolling when new items arrive
             const list = Dom.list();
             if (list) {
                 this._observer = new MutationObserver(muts => {
                     if (interval) {
-                        // perform a scroll immediately when DOM changes
+                        // when messages appear, try scrolling up again immediately
                         const before = scroller.scrollTop;
-                        if (flip) scroller.scrollTop = scroller.scrollHeight;
-                        else scroller.scrollTop = 0;
-                        flip = !flip;
+                        scroller.scrollTop = 0;
                         console.log('observer scroll, before=', before, 'after=', scroller.scrollTop);
                     }
                 });
                 this._observer.observe(list, { childList: true, subtree: true });
             }
 
-            let flip = false;
+            // direction flag: normally scroll upward; only go downward when stuck
+            let directionUp = true;
             interval = setInterval(() => {
                 const before = scroller.scrollTop;
-                if (flip) {
-                    scroller.scrollTop = scroller.scrollHeight;
-                } else {
+                if (directionUp) {
                     scroller.scrollTop = 0;
+                } else {
+                    scroller.scrollTop = scroller.scrollHeight;
                 }
-                flip = !flip;
-                console.log('scroller.scrollTop set, before=', before, 'after=', scroller.scrollTop);
+                // adjust direction based on whether movement occurred
+                if (scroller.scrollTop !== before) {
+                    // resumed progress toward top
+                    directionUp = true;
+                } else {
+                    // no change; flip direction for next tick so we nudge bottom
+                    directionUp = !directionUp;
+                }
+                console.log('scroller.scrollTop set, before=', before, 'after=', scroller.scrollTop,'dirUp=',directionUp);
 
                 const count = Dom.items().length;
                 if (count !== lastCount) {
                     lastCount = count;
                     lastChange = Date.now();
-                    UI.showModal(`Scrolling… ${count} messages seen`);
-                    UI.setStatus(`Scrolling… ${count} messages seen`);
+                    updateStatus();
+                } else if (Date.now() - lastChange > 10000) {
+                    // been scrolling without new messages for 10s; refresh timestamp
+                    updateStatus();
                 }
 
                 if (scroller.scrollTop === before &&
@@ -95,4 +106,8 @@
             UI.enableSave();
         }
     };
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Scroll;
 }

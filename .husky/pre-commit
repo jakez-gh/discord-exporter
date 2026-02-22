@@ -11,14 +11,22 @@ fi
 # build the userscript and ensure dist files are not committed
 npm run build
 
-git diff --cached --name-only | grep '^dist/' && {
-  echo "ERROR: build artifacts under dist/ should not be committed." >&2
-  exit 1
-}
+# version_gate may have bump package.json; re-stage if changed
+if git diff --name-only | grep -q '^package.json$'; then
+  git add package.json
+fi
 
-# lint staged files (fallback to full lint if lint-staged not configured)
-if [ -f package.json ]; then
-  npx lint-staged || npm run lint
+# prevent checking in build artifacts from prior steps
+# ensure no unstaged or untracked changes are hiding in the working tree
+# this prevents committing when other edits would be lost or forgotten
+if ! git diff --quiet; then
+  echo "ERROR: You have unstaged changes. Please commit or stash them before committing." >&2
+  exit 1
+fi
+
+if [ -n "$(git ls-files --others --exclude-standard)" ]; then
+  echo "ERROR: You have untracked files. Please add, commit, or stash them before committing." >&2
+  exit 1
 fi
 
 # additional security checks can be added here

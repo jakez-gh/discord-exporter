@@ -139,3 +139,8 @@
         }
     };
 }
+
+// support CommonJS in tests
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = UI;
+}
