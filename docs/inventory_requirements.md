@@ -4,13 +4,11 @@ should document the current folder with efficient english and greater detail tha
 Could document the "in_scope", "out_scope", "notes" (see below for more clarification on this)
 should document every file/folder contained in the current folder.
 
-
 every file/folder entry in inventory.md should:
 have a description that uses clear English to clearly explain why this file/folder needs to exist.
 maybe have in_scope section for clarifying the description further
 maybe have out_scope section
 maybe have notes section as a "junk drawer" for each file/folder
-
 
 for automation quality gates for inventory:
 automatically check the inventory.md exists in every visible folder in a project.

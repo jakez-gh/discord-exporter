@@ -65,7 +65,7 @@ repo and runs on every `push` or `pull_request` against the `main` branch.
 A couple of extra checks have been folded in from other projects and are
 persisted here:
 
-* **Inventory completeness & correctness** – the inventory rules script
+- **Inventory completeness & correctness** – the inventory rules script
   (`tests/tools/inventory_rules.py`) inspects every visible folder, confirming
   that `inventory.md` exists, describes the folder, lists each file/folder with
   a unique, sufficiently long description, and contains no extraneous entries.
@@ -73,17 +73,17 @@ persisted here:
   the project’s inventory philosophy must also exist; the gate checks for it on
   every run.  This behaviour was inspired by the comprehensive gate in the
   `autoplay` repository (see
-  https://github.com/jakez-gh/autoplay/blob/main/tests/tools/inventory_quality_gate.py)
+  <https://github.com/jakez-gh/autoplay/blob/main/tests/tools/inventory_quality_gate.py>)
   but covers the expanded requirements described in
   `docs/inventory_guidelines.md` (also committed).
 
-* **Header verification** – every supported file (`.js`, `.md`) is scanned by
+- **Header verification** – every supported file (`.js`, `.md`) is scanned by
   `tests/tools/header_check.py` to ensure its first few lines contain a
   natural‑language description and a semantic version string (e.g. `1.2.3`).
   This encourages explicit versioning and descriptive headers across the
   codebase.
 
-* **Quality‑gates documentation** – ensures this very document exists and
+- **Quality‑gates documentation** – ensures this very document exists and
   actually *describes what should and should not be contained within it*.
   This gate was created specifically for this repository in response to a
   request, but it’s documented here so it travels with the repo.

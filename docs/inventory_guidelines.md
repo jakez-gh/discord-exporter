@@ -61,11 +61,11 @@ Detailed examples may be found in the `autoplay` repository under its various
 The CI pipeline runs `tests/tools/inventory_rules.py` which implements the
 following checks:
 
-* Every visible folder contains `inventory.md`.
-* Folder descriptions are non‑trivial (min 10 words).
-* All sibling files/folders are listed and described (min 4 words), with
+- Every visible folder contains `inventory.md`.
+- Folder descriptions are non‑trivial (min 10 words).
+- All sibling files/folders are listed and described (min 4 words), with
   unique descriptions.
-* No spurious entries appear.
+- No spurious entries appear.
 
 Failures will block commits/PRs and are reported by the quality‑gate workflow.
 

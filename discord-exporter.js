@@ -23,10 +23,22 @@
     const dom = Dom(sel);
     const log = Log();
 
-    const ui = UI(cfg, log);
-    const scroll = Scroll(cfg, dom, ui, log);
-    const extract = Extract(cfg, dom, log);
-    const save = Save(cfg, log);
+    // if the communication module is present it will have defined a global
+    // `Comm` function; call it to get an instance.  In tests we may not
+    // include the module so guard against undefined.
+    const comm = (typeof Comm !== 'undefined') ? Comm(log) : null;
+
+    const ui = UI(cfg, log, comm);
+    const scroll = Scroll(cfg, dom, ui, log, comm);
+    // conversation message storage sits cross-cutting and attaches to scroll
+    const conv = (typeof ConversationMessages !== 'undefined') ? ConversationMessages(log) : null;
+    if (conv) conv.attachScroll(scroll);
+
+    const extract = Extract(cfg, dom, log, conv);
+    if (conv && extract && typeof extract.attachConversation === 'function') {
+        extract.attachConversation(conv);
+    }
+    const save = Save(cfg, log, comm);
 
     UpgradeStickers(extract);
     UpgradeAttachments(extract);

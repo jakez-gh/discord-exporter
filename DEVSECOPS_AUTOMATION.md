@@ -52,7 +52,6 @@ The generated `dist/discord-exporter.user.js` file is *not* checked into source
 control; `dist/` is listed in `.gitignore` and hooks will error if build
 artifacts are staged.
 
-
 > Note: as the script grows, additional static (SAST) or dynamic (DAST) tools
 > can be slotted into the pre-commit hook and CI workflow. Semgrep rules or an
 > OWASP ZAP scan could be added when the codebase begins interacting with

@@ -92,6 +92,77 @@ describe('UI module', () => {
         expect(logSpy.calledWith('Status update:', 'bar')).to.be.true;
         logSpy.restore();
     });
+
+    it('mirrors status messages into visible modal when displayed', () => {
+        // prepare panel and modal elements
+        const panel = document.createElement('div');
+        panel.id = Config().ui.statusId;
+        document.body.appendChild(panel);
+        const modal = document.createElement('div');
+        modal.id = 'dmexp-modal';
+        modal.style.display = 'flex'; // visible
+        const inner = document.createElement('div');
+        inner.id = 'dmexp-modal-text';
+        modal.appendChild(inner);
+        document.body.appendChild(modal);
+
+        const ui = UIFactory(Config(), console);
+        ui.setStatus('hello');
+        expect(panel.textContent).to.equal('hello');
+        expect(inner.textContent).to.equal('hello');
+
+        // updating again should affect both
+        ui.setStatus('world');
+        expect(panel.textContent).to.equal('world');
+        expect(inner.textContent).to.equal('world');
+    });
+
+    it('updates panel when communicator events are fired', () => {
+        // prepare panel
+        const panel = document.createElement('div');
+        panel.id = Config().ui.statusId;
+        document.body.appendChild(panel);
+        const modal = document.createElement('div');
+        modal.id = 'dmexp-modal';
+        modal.style.display = 'flex';
+        const inner = document.createElement('div');
+        inner.id = 'dmexp-modal-text';
+        modal.appendChild(inner);
+        document.body.appendChild(modal);
+
+        // stub communicator that allows listeners registration
+        const comm = {
+            _statusCb: null,
+            onStatus(fn) { this._statusCb = fn; },
+            onProgress() {},
+            onLog() {},
+            notifyStatus(msg) { if (this._statusCb) this._statusCb(msg); }
+        };
+        const ui = UIFactory(Config(), console, comm);
+        // simulate a status event coming from other module
+        comm.notifyStatus('comm-test');
+        expect(panel.textContent).to.equal('comm-test');
+        expect(inner.textContent).to.equal('comm-test');
+    });
+
+    it('mirrors panel status into modal when visible', () => {
+        const ui = UIFactory(Config(), console);
+        // prepare panel and modal elements
+        const el = document.createElement('div');
+        el.id = Config().ui.statusId;
+        document.body.appendChild(el);
+        ui.showModal('initial');
+        expect(document.getElementById('dmexp-modal-text').textContent).to.equal('initial');
+
+        ui.setStatus('updated');
+        // modal text should update as well
+        expect(document.getElementById('dmexp-modal-text').textContent).to.equal('updated');
+
+        // hide and then update; modal should not change when hidden
+        ui.hideModal();
+        ui.setStatus('behind');
+        expect(document.getElementById('dmexp-modal-text').textContent).to.equal('updated');
+    });
     it('creates a progress bar and setProgress adjusts width', () => {
         const selectors = { messageList: '#msgs', messageItem: 'li' };
         const domHelper = { items: () => [] };

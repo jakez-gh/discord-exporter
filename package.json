@@ -1,6 +1,6 @@
 {
-  "name": "discord-exporter",
-  "version": "3.3.33",
+  "name": "benj-discord-conversation-extractor",
+  "version": "3.3.35",
   "description": "Tampermonkey script for exporting Discord chats",
   "main": "build.js",
   "scripts": {

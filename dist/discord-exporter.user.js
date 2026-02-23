@@ -1,8 +1,8 @@
 
 // ==UserScript==
-// @name         Discord DM Exporter v3.3.32 Modular Build
+// @name         Discord DM Exporter v3.3.35 Modular Build
 // @namespace    http://tampermonkey.net/
-// @version      3.3.32
+// @version      3.3.35
 // @description  Built from modular source files
 // @match        https://discord.com/channels/@me/*
 // @run-at       document-idle
@@ -11,7 +11,7 @@
 
 (function() {
 'use strict';
-console.log('Discord Exporter script loaded (version 3.3.32, built 2026-02-22T20:53:20.942Z)');
+console.log('Discord Exporter script loaded (version 3.3.35, built 2026-02-23T15:46:20.454Z)');
 // ------------------------------------------------------------
 // BEGIN CONCATENATED MODULES
 // ------------------------------------------------------------
@@ -97,118 +97,51 @@ function  Selectors() {
 
 
 /************************************************************
+ * MODULE: slice/comm.js
+ ************************************************************/
+// wrapper proxying to horizontal/comm implementation
+module.exports = require('../horizontal/comm');
+
+
+
+/************************************************************
+ * MODULE: slice/conversation-message-list.js
+ ************************************************************/
+// wrapper for compatibility; real implementation lives in vertical/conversation-message-list
+module.exports = require('../vertical/conversation-message-list');
+
+
+/************************************************************
+ * MODULE: slice/conversation_messages.js
+ ************************************************************/
+// wrapper proxying to horizontal/conversation_messages
+module.exports = require('../horizontal/conversation_messages');
+
+
+/************************************************************
  * MODULE: slice/extract.js
  ************************************************************/
- function Extract(Config, Dom, Log) {
-    const extractors = [];
+// wrapper pointing at vertical/extract implementation
+module.exports = require('../vertical/extract');
 
-    return {
-        register(fn) {
-            extractors.push(fn);
-        },
 
-        run() {
-            const messages = Dom.items().map(li => {
-                const base = this.base(li);
-                extractors.forEach(fn => fn(li, base));
-                return base;
-            });
 
-            return {
-                text: messages.map(m => `[${m.timestamp}] ${m.username}: ${m.content}`).join('\n'),
-                json: { messages }
-            };
-        },
 
-        base(li) {
-            const wrapper = li.querySelector('[role="article"]') || li;
+/************************************************************
+ * MODULE: slice/panel.js
+ ************************************************************/
+// wrapper proxying to horizontal/panel implementation
+module.exports = require('../horizontal/panel');
 
-            return {
-                timestamp: wrapper.querySelector('time')?.getAttribute('datetime') || '',
-                username: wrapper.querySelector('[id^="message-username"]')?.innerText.trim() || '',
-                content: wrapper.querySelector('[id^="message-content"]')?.innerText.trim() || '',
-                attachments: [],
-                stickers: []
-            };
-        }
-    };
-}
 
 
 
 /************************************************************
  * MODULE: slice/save.js
  ************************************************************/
- function Save(Config, Log, UI) {
-    return {
-        // note: returning promise as async helps tests await and logs
-        async download(type, Extract) {
-            console.log('Save.download invoked, type=', type);
-            const { text, json } = Extract.run();
-            const total = json.messages.length;
-            console.log('Save.extract returned', total, 'messages');
-            const config = Config || {};
-            const logInterval = config.logInterval || 50;
-
-            if (type === 'md') {
-                console.log('Generating markdown output');
-                let md = '# Messages\n';
-                let attachIdx = 0;
-                for (let i = 0; i < json.messages.length; i++) {
-                    const m = json.messages[i];
-                    const line = `- [${m.timestamp}] **${m.username}**: ${m.content}`;
-                    md += line + '\n';
-                    if (i % logInterval === 0) console.log(line);
-                    if (UI && UI.setStatus) {
-                        UI.setStatus(`Extracting… ${i+1}/${total}`);
-                    }
-                    if (m.attachments && m.attachments.length) {
-                        m.attachments.forEach(url => {
-                            const ext = url.split('.').pop().split('?')[0];
-                            const fname = `attachment-${++attachIdx}.${ext}`;
-                            md += `  [Attachment](${fname})\n`;
-                            // trigger download of the binary
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = fname;
-                            a.click();
-                        });
-                    }
-                }
-                console.log(`Finished generating markdown for ${total} messages`);
-                const blob = new Blob([md], { type: 'text/markdown' });
-                const anchor = document.createElement('a');
-                anchor.href = URL.createObjectURL(blob);
-                anchor.download = 'discord.md';
-                anchor.click();
-                return;
-            }
-            // fallback existing behavior: log throttled, update UI
-            if (UI && UI.setStatus) {
-                json.messages.forEach((m, idx) => {
-                    if (idx % logInterval === 0) {
-                        console.log(`- [${m.timestamp}] ${m.username}: ${m.content}`);
-                    }
-                    UI.setStatus(`Extracting… ${idx+1}/${total}`);
-                });
-            }
-            console.log(`Finished ${total} messages`);
-
-            const blob = new Blob(
-                [type === 'txt' ? text : JSON.stringify(json, null, 2)],
-                { type: type === 'txt' ? 'text/plain' : 'application/json' }
-            );
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `discord_.${type}`;
-            a.click();
-        }
-    };
-}
-
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = Save;
-}
+// wrapper to keep original `slice/save` path working; implementation
+// moved to vertical/save
+module.exports = require('../vertical/save');
 
 
 
@@ -216,57 +149,8 @@ if (typeof module !== 'undefined' && module.exports) {
 /************************************************************
  * MODULE: slice/scroll.js
  ************************************************************/
- function Scroll(Config, Dom, UI, Log) {
-    let interval = null;
-    let lastChange = 0;
-    let lastCount = 0;
-    // persistent buffer of seen message ids and their order.  tracked across
-    // calls so tests and later extraction can consult it.
-    let seenIds = new Set();
-    let seenOrder = [];
-    // note: we no longer keep a separate "seenCount" variable; callers
-    // should use seenOrder.length when they care about the number of
-    // unique messages seen.
-    console.log('Scroll module initialized, file slice/scroll.js');
-
-    return {
-        start() {
-            let scroller = Dom.scroller();
-            console.log('scroll.start invoked, scroller=', scroller);
-            if (!scroller) {
-                UI.showModal('Scroller not found; cannot scroll.');
-                return UI.setStatus('Scroller not found.');
-            }
-
-            // locate first ancestor that actually overflows; this is the
-            // element through which Discord implements scrolling.
-            let candidate = scroller;
-            while (candidate && candidate.scrollHeight <= candidate.clientHeight) {
-                candidate = candidate.parentElement;
-            }
-            if (candidate && candidate !== scroller) {
-                scroller = candidate;
-                console.log('using ancestor scroller', scroller);
-            }
-
-            // reset buffer each time we start scrolling so earlier runs don't
-            // contaminate the counts.
-            seenIds.clear();
-            seenOrder.length = 0;
-            lastCount = 0;
-
-            const scanItems = () => {
-                const items = Dom.items();
-                for (let i = 0; i < items.length; i++) {
-                    const id = items[i] && items[i].getAttribute && items[i].getAttribute('id');
-                    if (id && !seenIds.has(id)) {
-                        seenIds.add(id);
-                        seenOrder.push(id);
-                    }
-                }
-            };
-            scanItems();
-            lastCount = seenOrder.length;
+// compatibility shim: real implementation lives in vertical/scroll
+module.exports = require('../vertical/scroll');
 
             // helper to read first message id for stall detection/update reasons
             const getFirstId = () => {
@@ -276,9 +160,18 @@ if (typeof module !== 'undefined' && module.exports) {
             let lastFirstId = getFirstId();
             lastChange = Date.now();
 
-            UI.showModal('Scrolling…');
+            // use communicator if available so UI updates happen via subscription
+            const initialMsg = 'Scrolling…';
+            if (comm) comm.notifyStatus(initialMsg);
+            else console.log(initialMsg);
 
             // build status helper including oldest message timestamp
+            //
+            // During scrolling we prefer to put the text in the modal overlay
+            // (which sits above the panel) so that users watching the progress can
+            // see it even though the panel floats behind a translucent cover.  The
+            // helper will fall back to `UI.setStatus` when a modal function isn't
+            // available (such as in tests, or prior to the panel being created).
             const updateStatus = () => {
                 const count = seenOrder.length; // use number of unique ids seen
                 let ts = 'unknown';
@@ -293,7 +186,16 @@ if (typeof module !== 'undefined' && module.exports) {
                         if (dt) ts = new Date(dt).toLocaleString();
                     }
                 }
-                UI.setStatus(`Scrolling… ${count} messages seen (oldest ${ts})`);
+                const msg = `Scrolling… ${count} messages seen (oldest ${ts})`;
+                // status belongs in the modal overlay during scroll rather than
+                // the panel behind the glass pane
+                if (comm) {
+                    comm.notifyStatus(msg);
+                } else if (UI.showModal) {
+                    UI.showModal(msg);
+                } else if (UI.setStatus) {
+                    UI.setStatus(msg);
+                }
             };
 
             // show the first status immediately so the panel isn't blank
@@ -314,15 +216,16 @@ if (typeof module !== 'undefined' && module.exports) {
                             lastCount = newSeen;
                             lastChange = Date.now();
                             updateStatus();
-                            if (UI.setProgress) {
-                                UI.setProgress(Math.min(newSeen / 10000, 1));
-                            }
+                            const prog = Math.min(newSeen / 10000, 1);
+                            if (comm) comm.notifyProgress(prog);
+                            else if (UI.setProgress) UI.setProgress(prog);
                         }
                         stallCount = 0;
 
                         const before = scroller.scrollTop;
                         scroller.scrollTop = 0;
-                        console.log('observer scroll, before=', before, 'after=', scroller.scrollTop);
+                        if (comm) comm.notifyLog('observer scroll, before=', before, 'after=', scroller.scrollTop);
+                        else console.log('observer scroll, before=', before, 'after=', scroller.scrollTop);
                     }
                 });
                 this._observer.observe(list, { childList: true, subtree: true });
@@ -351,7 +254,8 @@ if (typeof module !== 'undefined' && module.exports) {
                         directionUp = !directionUp;
                     }
                 }
-                console.log('scroller.scrollTop set, before=', before, 'after=', scroller.scrollTop,'dirUp=',directionUp);
+                if (comm) comm.notifyLog('scroller.scrollTop set, before=', before, 'after=', scroller.scrollTop,'dirUp=',directionUp);
+                else console.log('scroller.scrollTop set, before=', before, 'after=', scroller.scrollTop,'dirUp=',directionUp);
 
                 // refresh seenIds before computing progress
                 scanItems();
@@ -364,9 +268,9 @@ if (typeof module !== 'undefined' && module.exports) {
                     if (currentFirst) lastFirstId = currentFirst;
                     lastChange = Date.now();
                     updateStatus();
-                    if (UI.setProgress) {
-                        UI.setProgress(Math.min(newSeenCount / 10000, 1));
-                    }
+                    const prog = Math.min(newSeenCount / 10000, 1);
+                    if (comm) comm.notifyProgress(prog);
+                    else console.log('progress', prog);
                     stallCount = 0; // reset stall when progress seen
                 } else {
                     // no progress this tick
@@ -381,7 +285,8 @@ if (typeof module !== 'undefined' && module.exports) {
                     }
                 }
                 if (stallCount >= 3 && Date.now() - lastChange > Config.scrollStallTimeoutMs) {
-                    console.log('auto-stop triggered after', stallCount, 'stalls');
+                    if (comm) comm.notifyLog('auto-stop triggered after', stallCount, 'stalls');
+                    else console.log('auto-stop triggered after', stallCount, 'stalls');
                     this.stop(true);
                 }
             }, Config.scrollIntervalMs);
@@ -394,9 +299,11 @@ if (typeof module !== 'undefined' && module.exports) {
                 this._observer.disconnect();
                 this._observer = null;
             }
-            UI.hideModal();
-            UI.setStatus(auto ? 'Reached top. Extracting…' : 'Stopped.');
-            UI.enableSave();
+            const finalMsg = auto ? 'Reached top. Extracting…' : 'Stopped.';
+            if (comm) comm.notifyStatus(finalMsg);
+            else console.log(finalMsg);
+            // note: enabling save and hiding modal are UI concerns; communicator
+            // clients (e.g. the UI layer) should implement those responses.
         },
 
         getSeenOrder() {
@@ -415,181 +322,9 @@ if (typeof module !== 'undefined' && module.exports) {
 /************************************************************
  * MODULE: slice/ui.js
  ************************************************************/
- function UI(Config, Log) {
-    return {
-        init(callbacks) {
-            // allow caller to pass in a DOM helper if available so we can
-            // wait for messages before marking ready
-            this.cb = callbacks;
-            this.dom = callbacks.dom;
-            this.injectStyles();
-            this.createPanel();
-            this.makeDraggable();
+// shim that proxies to horizontal/ui implementation
+module.exports = require('../horizontal/ui');
 
-            // start with a tentative message and poll until we see content *and* things quiet down
-            let lastLog = 0;
-            const origLog = console.log;
-            console.log = (...args) => {
-                lastLog = Date.now();
-                origLog.apply(console, args);
-            };
-
-            const check = () => {
-                let count = 0;
-                if (this.dom) {
-                    count = this.dom.items().length;
-                }
-                const now = Date.now();
-                if (count > 0 && now - lastLog >= 500) {
-                    // restore original log
-                    console.log = origLog;
-                    this.setStatus('Ready.');
-                } else {
-                    this.setStatus(`Waiting for chat messages (${count} seen)…`);
-                    setTimeout(check, 500);
-                }
-            };
-            check();
-        },
-
-        createPanel() {
-            const panel = document.createElement('div');
-            panel.id = Config.ui.panelId;
-            panel.innerHTML = `
-                <div style="font-size:12px; margin-bottom:4px;">
-                    Discord chat exporter (Tampermonkey script by Ben)
-                </div>
-                <button id="dmexp-start">Start</button>
-                <button id="dmexp-stop">Stop</button>
-                <button id="dmexp-save-txt" disabled>Save TXT</button>
-                <button id="dmexp-save-json" disabled>Save JSON</button>
-                <div id="${Config.ui.statusId}"></div>
-                <div id="${Config.ui.progressId}" style="width:100%;background:#444;margin-top:4px;">
-                    <div id="${Config.ui.progressBarId}" style="width:0%;height:6px;background:#0f0;transition:width 0.2s;"></div>
-                </div>
-            `;
-            document.body.appendChild(panel);
-
-            document.getElementById('dmexp-start').onclick = this.cb.onStart;
-            document.getElementById('dmexp-stop').onclick = this.cb.onStop;
-            document.getElementById('dmexp-save-txt').onclick = this.cb.onSaveTxt;
-            document.getElementById('dmexp-save-json').onclick = this.cb.onSaveJson;
-        },
-
-        setStatus(msg) {
-            document.getElementById(Config.ui.statusId).textContent = msg;
-            console.log('Status update:', msg);
-        },
-        injectStyles() {
-            const css = `
-#${Config.ui.panelId} {
-    position: fixed;
-    right: 10px;
-    bottom: 10px;
-    background-color: rgba(0, 123, 255, 0.9);
-    color: white;
-    padding: 8px;
-    border-radius: 8px;
-    z-index: 10000;
-    font-family: Arial, sans-serif;
-}
-#${Config.ui.panelId} button {
-    margin: 2px;
-    padding: 4px 8px;
-    background-color: #ffc107;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-#${Config.ui.panelId} #${Config.ui.statusId} {
-    margin-top: 4px;
-    font-size: 12px;
-}
-.dmexp-header-button {
-    position: fixed;
-    top: 80px;
-    right: 20px;
-    background-color: #28a745;
-    color: white;
-    padding: 6px 12px;
-    border-radius: 4px;
-    z-index: 10001;
-    font-size: 14px;
-    font-weight: bold;
-    cursor: pointer;
-}
-`;
-            const style = document.createElement('style');
-            style.textContent = css;
-            document.head.appendChild(style);
-        },
-        // modal overlay for status updates
-        showModal(msg) {
-            let m = document.getElementById('dmexp-modal');
-            if (!m) {
-                m = document.createElement('div');
-                m.id = 'dmexp-modal';
-                m.style = 'position:fixed;top:0;left:0;width:100%;height:100%;' +
-                          'background:rgba(0,0,0,0.5);display:flex;' +
-                          'align-items:center;justify-content:center;z-index:10002;';
-                const inner = document.createElement('div');
-                inner.id = 'dmexp-modal-text';
-                inner.style = 'background:white;padding:20px;border-radius:8px;max-width:80%;';
-                m.appendChild(inner);
-                document.body.appendChild(m);
-            }
-            document.getElementById('dmexp-modal-text').textContent = msg;
-            m.style.display = 'flex';
-        },
-        hideModal() {
-            const m = document.getElementById('dmexp-modal');
-            if (m) m.style.display = 'none';
-        },
-        enableSave() {
-            document.getElementById('dmexp-save-txt').disabled = false;
-            document.getElementById('dmexp-save-json').disabled = false;
-        },
-        setProgress(frac) {
-            const bar = document.getElementById(Config.ui.progressBarId);
-            if (bar) {
-                bar.style.width = `${Math.floor(frac * 100)}%`;
-            }
-        },
-        makeDraggable() {
-            const panel = document.getElementById(Config.ui.panelId);
-            let isDown = false;
-            let offset = [0,0];
-            panel.addEventListener('mousedown', function(e) {
-                isDown = true;
-                // make dimensions explicit so the element doesn't change size when
-                // we remove the anchoring rules below or while dragging around
-                panel.style.width = panel.offsetWidth + 'px';
-                panel.style.height = panel.offsetHeight + 'px';
-
-                // remove right/bottom anchors so left/top moves the box instead of
-                // causing it to resize due to conflicting constraints
-                panel.style.right = '';
-                panel.style.bottom = '';
-                offset = [panel.offsetLeft - e.clientX, panel.offsetTop - e.clientY];
-            }, true);
-            document.addEventListener('mouseup', function() {
-                isDown = false;
-            }, true);
-            document.addEventListener('mousemove', function(event) {
-                event.preventDefault();
-                if (isDown) {
-                    panel.style.left = (event.clientX + offset[0]) + 'px';
-                    panel.style.top  = (event.clientY + offset[1]) + 'px';
-                }
-            }, true);
-        }
-    };
-}
-
-// support CommonJS in tests
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = UI;
-}
 
 
 
@@ -648,10 +383,22 @@ if (typeof module !== 'undefined' && module.exports) {
     const dom = Dom(sel);
     const log = Log();
 
-    const ui = UI(cfg, log);
-    const scroll = Scroll(cfg, dom, ui, log);
-    const extract = Extract(cfg, dom, log);
-    const save = Save(cfg, log);
+    // if the communication module is present it will have defined a global
+    // `Comm` function; call it to get an instance.  In tests we may not
+    // include the module so guard against undefined.
+    const comm = (typeof Comm !== 'undefined') ? Comm(log) : null;
+
+    const ui = UI(cfg, log, comm);
+    const scroll = Scroll(cfg, dom, ui, log, comm);
+    // conversation message storage sits cross-cutting and attaches to scroll
+    const conv = (typeof ConversationMessages !== 'undefined') ? ConversationMessages(log) : null;
+    if (conv) conv.attachScroll(scroll);
+
+    const extract = Extract(cfg, dom, log, conv);
+    if (conv && extract && typeof extract.attachConversation === 'function') {
+        extract.attachConversation(conv);
+    }
+    const save = Save(cfg, log, comm);
 
     UpgradeStickers(extract);
     UpgradeAttachments(extract);
